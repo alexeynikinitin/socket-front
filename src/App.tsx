@@ -1,6 +1,6 @@
 import './App.css';
 import {io} from "socket.io-client";
-import React, {useEffect, useState} from 'react';
+import React, {ChangeEvent, useEffect, useState} from 'react';
 
 const socket = io("http://localhost:8080");
 
@@ -9,13 +9,21 @@ function App() {
    const [myButtonClassName, setButtonClassName] = useState("myForm__open");
 
    const [message, setMessage] = useState("");
+   const [name, setName] = useState("");
    const [chat, setChat] = useState<PayloadType[]>([]);
 
    const sendChat = () => {
       // e.preventDefault();
-      socket.emit("client-message-sent", { message });
+      socket.emit("client-message-sent", message);
       setMessage("");
    };
+
+   const sendName = () => {
+      socket.emit("set-name-client", name);
+      setName("");
+   }
+
+   const changeName = (e: ChangeEvent<HTMLInputElement>) => setName(e.currentTarget.value)
 
    const openForm = () => {
       setMyFormClassName("myForm__open");
@@ -35,6 +43,7 @@ function App() {
    useEffect(() => {
       socket.on('init-messages-loaded', (payload: PayloadType[]) => {
          setChat(payload);
+         console.log(payload)
       });
    }, []);
 
@@ -46,6 +55,7 @@ function App() {
                <div className="container" key={`${payload.message}-${index}`}>
                   <img src="https://www.w3schools.com/w3images/bandmember.jpg"
                        alt="Avatar"/>
+                  <h4>{payload.user.name}</h4>
                   <p>{payload.message}</p>
                   <span className="time-right">11:00</span>
                </div>
@@ -72,6 +82,16 @@ function App() {
                   placeholder="Type message.."
                   onChange={(e) => setMessage(e.currentTarget.value)}
                />
+               <div style={{marginBottom: "20px"}}>
+                  <input
+                     style={{marginRight: "20px"}}
+                     type="text"
+                     value={name}
+                     onChange={changeName}
+                  />
+                  <button onClick={sendName}>Set Name</button>
+               </div>
+
                <button className="btn" onClick={sendChat}>Send</button>
                <button
                   type="button"
@@ -90,4 +110,8 @@ export default App;
 
 type PayloadType = {
    message: string;
+   user: {
+      id: string;
+      name: string;
+   }
 }
