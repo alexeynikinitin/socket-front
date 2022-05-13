@@ -1,25 +1,30 @@
 import './App.css';
-import {io} from "socket.io-client";
 import React, {ChangeEvent, useEffect, useState} from 'react';
+import {
+   createConnection,
+   destroyConnection,
+   MessageType, sendMessage, sendName
+} from "../store/chat/chatReducer";
+import {useAppDispatch, useAppSelector} from "../store/store";
 
-const socket = io("http://localhost:8080");
 
 function App() {
+   const dispatch = useAppDispatch()
+   const messages = useAppSelector<MessageType[]>(state => state.chat.messages)
+
    const [myFormClassName, setMyFormClassName] = useState("myForm__close");
    const [myButtonClassName, setButtonClassName] = useState("myForm__open");
 
    const [message, setMessage] = useState("");
    const [name, setName] = useState("");
-   const [chat, setChat] = useState<PayloadType[]>([]);
 
-   const sendChat = () => {
-      // e.preventDefault();
-      socket.emit("client-message-sent", message);
+   const sendMessageHandle = () => {
+      dispatch(sendMessage(message))
       setMessage("");
    };
 
-   const sendName = () => {
-      socket.emit("set-name-client", name);
+   const sendNameHandle = () => {
+      dispatch(sendName(name))
       setName("");
    }
 
@@ -35,28 +40,20 @@ function App() {
    };
 
    useEffect(() => {
-      socket.on("new-message-sent", (payload: PayloadType) => {
-         setChat([...chat, payload]);
-      });
-   });
-
-   useEffect(() => {
-      socket.on('init-messages-loaded', (payload: PayloadType[]) => {
-         setChat(payload);
-         console.log(payload)
-      });
+      dispatch(createConnection())
+      return () => dispatch(destroyConnection())
    }, []);
 
    return (
       <div className="App">
 
-         {chat.map((payload, index) => {
+         {messages.map((message, index) => {
             return (
-               <div className="container" key={`${payload.message}-${index}`}>
+               <div className="container" key={`${message.message}-${index}`}>
                   <img src="https://www.w3schools.com/w3images/bandmember.jpg"
                        alt="Avatar"/>
-                  <h4>{payload.user.name}</h4>
-                  <p>{payload.message}</p>
+                  <h4>{message.user.name}</h4>
+                  <p>{message.message}</p>
                   <span className="time-right">11:00</span>
                </div>
             )
@@ -89,10 +86,10 @@ function App() {
                      value={name}
                      onChange={changeName}
                   />
-                  <button onClick={sendName}>Set Name</button>
+                  <button onClick={sendNameHandle}>Set Name</button>
                </div>
 
-               <button className="btn" onClick={sendChat}>Send</button>
+               <button className="btn" onClick={sendMessageHandle}>Send</button>
                <button
                   type="button"
                   onClick={closeForm}
@@ -107,11 +104,3 @@ function App() {
 }
 
 export default App;
-
-type PayloadType = {
-   message: string;
-   user: {
-      id: string;
-      name: string;
-   }
-}
